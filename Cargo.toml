@@ -1,0 +1,20 @@
+[package]
+name = "can_utils"
+version = "0.1.2"
+authors = ["Raphael Nissl <raphael@nissl.net>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+socketcan = "1.7.0"
+clap = "2.33.3"
+
+[[bin]]
+name = "canfdtest"
+path = "src/bin/canfdtest.rs"
+
+[[bin]]
+name = "cansend"
+path = "src/bin/cansend.rs"
+
