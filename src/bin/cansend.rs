@@ -1,5 +1,5 @@
-use std::env;
 use std::process;
+use clap::{Arg, App};
 use socketcan::{CANSocket, CANFrame};
 
 //TODO: write help screen function
@@ -18,6 +18,25 @@ fn help_screen() {
 ///
 fn main() {
     //TODO: write lib-function for parsing the arguments, perhaps use 'claps'
+    let arg_matches = App::new("cansend")
+                            .version("0.0.4")
+                            .author("Raphael Nissl")
+                            .about("Program sets a CAN-Frame on a bus with given ID and data (does not support CAN FD protocol)")
+                            .arg(
+                                Arg::with_name("socket")
+                                    .help("name of CAN socket")
+                                    .index(1)
+                                    .requires("frame")
+                                    .required(true),
+                            )
+                            .arg(
+                                Arg::with_name("frame")
+                                    .help("Frameconsisting of ID and data")
+                                    .index(2)
+                                    .required(true),
+                            )
+                            .get_matches();
+/*
     let args: Vec<String> = env::args().collect(); 
     if args.len() != 3 {
         println!("Incorrect number of arguments given!");
@@ -32,6 +51,8 @@ fn main() {
         process::exit(1);
     }
     let can_socket_name: &String = &args[1];
+*/
+    let can_socket_name: &str = arg_matches.value_of("socket").unwrap();
     let can_socket: CANSocket = match CANSocket::open(can_socket_name) {
         Ok(socket) => socket,
         Err(error) => {
@@ -41,6 +62,8 @@ fn main() {
             process::exit(1);
         }
     };
+    let frame_string: Vec<String> = arg_matches.value_of("frame").unwrap().split("#")
+        .map(|s| s.to_string()).collect();
     let frame_id: u32 = frame_string[0].parse().unwrap();
     let mut rtr: bool = false;
     let mut eff: bool = false;
@@ -56,7 +79,7 @@ fn main() {
     let frame_data: &[u8] = frame_data.as_bytes();
     if frame_data.len() > 8 {
         println!("Too many data bytes given!");
-        // can_socket.close();
+        // socket will be closed on deallocation so nothing to do here
         process::exit(1);
     }
     let frame: CANFrame = CANFrame::new(
@@ -65,7 +88,7 @@ fn main() {
     // blocking write function
     match can_socket.write_frame_insist(&frame) {
         Ok(()) => {
-            // can_socket.close();
+            // socket will be closed on deallocation so nothing to do here
             process::exit(0)
         }
         Err(error) => {
