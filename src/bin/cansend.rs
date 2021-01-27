@@ -2,11 +2,6 @@ use clap::{App, Arg};
 use socketcan::{CANFrame, CANSocket};
 use std::process;
 
-//TODO: write help screen function
-fn help_screen() {
-    println!("This program sends a frame via given CAN socket");
-}
-
 /// Sets a single CAN frame on a given bus (does not support CAN-FD)
 /// # Arguments
 /// * 'args' - program arguments
