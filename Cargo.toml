@@ -1,8 +1,12 @@
 [package]
 name = "can_utils"
-version = "0.1.2"
+version = "0.0.5"
 authors = ["Raphael Nissl <raphael@nissl.net>"]
 edition = "2018"
+repository = "https://github.com:rapnis/can-utils-rs.git"
+license = "GPL3"
+readme = "README.md"
+description = "Rusty implementation of famous can-utils (for learning purposes)"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
