@@ -2,13 +2,120 @@ use clap::{App, Arg};
 use socketcan::{CANFrame, CANSocket};
 use std::process;
 
+const CAN_MSG_SIZE: usize = 8;
+
+//TODO implement own error values to return
+fn string_to_hex(input: String) -> Option<Vec<u8>> {
+    let str: &str  = &input[..];
+    if str.len() % 2 != 0 || str.len() > (CAN_MSG_SIZE * 2) {
+        None
+    } else {
+        let result: Vec<u8> = (0..str.len())
+            .step_by(2)
+            .map(|o| u8::from_str_radix(&str[o..o + 2], 16)
+            .unwrap())
+            .collect();
+        Some(result)
+    }
+}
+
+//TODO implement own error values to return
+fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
+    let frame_tokens: Vec<String> = frame_string
+        .split("#")
+        .map(|s| s.to_string())
+        .collect();
+    println!("Frame tokens: {:?}", frame_tokens);
+    if frame_tokens.len() != 2 {
+        return None;
+    }
+    let frame_id: u32 = frame_tokens[0]
+        .parse()
+        .unwrap();
+    let mut rtr: bool = false;
+    let mut eff: bool = false;
+    if u32::pow(2, 11) - 1 < frame_id {
+        // set extended ID flag in frame
+        eff = true;
+    }
+    let frame_data: String = frame_tokens[1].to_owned();
+    if frame_data == "R" {
+        // set RTR flag in frame
+        rtr = true;
+        let frame: CANFrame = 
+            CANFrame::new(frame_id, &[], rtr, eff)
+                .expect("Error creating CAN-Remote-Frame");
+        Some(frame)
+    } else {
+        let data_bytes: &[u8] = &(string_to_hex(frame_data).unwrap())[..];
+        // let frame_data: &[u8] = frame_data
+        println!("Frame bytes: {:x?}", data_bytes);
+        let frame: CANFrame =
+            CANFrame::new(frame_id, data_bytes, rtr, eff)
+                .expect("Error creating CAN-Frame!");
+        Some(frame)
+    }
+}
+
+#[test]
+fn test_frame_parsing() {
+    let test_frame: String = "123#cafe".to_owned();
+    let exptected_frame: CANFrame = CANFrame::new(123, &[0xca, 0xfe], false, false)
+        .unwrap();
+
+    let created_frame: CANFrame = parse_frame_string(test_frame)
+        .unwrap();
+    // println!("Created frame: {:x?}\n Expected frame: {:x?}", created_frame, exptected_frame);
+    assert_eq!(exptected_frame.id(), created_frame.id());
+    assert_eq!(exptected_frame.is_extended(), created_frame.is_extended());
+    assert_eq!(exptected_frame.is_rtr(), created_frame.is_rtr());
+    for i in 0..exptected_frame.data().len() {
+        assert_eq!(exptected_frame.data()[i], created_frame.data()[i]);
+    }
+}
+
+#[test]
+fn test_frame_parsing_remote() {
+    let test_frame: String = "444#R"
+        .to_owned();
+    let exptected_frame: CANFrame = CANFrame::new(444, &[], true, false)
+        .unwrap();
+
+    let created_frame: CANFrame = parse_frame_string(test_frame)
+        .unwrap();
+    
+    assert_eq!(exptected_frame.id(), created_frame.id());
+    assert_eq!(exptected_frame.is_rtr(), created_frame.is_rtr());
+    assert_eq!(exptected_frame.data().len(), created_frame.data().len());
+}
+
+#[test]
+fn test_frame_parsing_extended() {
+    let test_frame: String = "123123123#0102030405060708"
+        .to_owned();
+    let exptected_frame: CANFrame = CANFrame::new(123123123, &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08], false, false)
+        .unwrap();
+    
+    let created_frame: CANFrame = parse_frame_string(test_frame)
+        .unwrap();
+
+    assert_eq!(exptected_frame.id(), created_frame.id());
+    assert_eq!(exptected_frame.is_extended(), created_frame.is_extended());
+    assert!(created_frame.is_extended());
+    assert_eq!(exptected_frame.is_rtr(), created_frame.is_rtr());
+    for i in 0..exptected_frame.data().len() {
+        assert_eq!(exptected_frame.data()[i], created_frame.data()[i]);
+    }
+}
+
+
 /// Sets a single CAN frame on a given bus (does not support CAN-FD)
 /// # Arguments
 /// * 'args' - program arguments
 ///
 /// # Examples
 /// ```
-/// // cansend  can0 123#cafe
+/// cansend  can0 123#cafe
 /// ```
 ///
 fn main() {
@@ -30,59 +137,23 @@ fn main() {
                                     .required(true),
                             )
                             .get_matches();
-    /*
-        let args: Vec<String> = env::args().collect();
-        if args.len() != 3 {
-            println!("Incorrect number of arguments given!");
-            help_screen();
-            process::exit(1);
-        }
-        let frame_string: Vec<String> = args[2].split("#")
-                .map(|s| s.to_string()).collect();
 
-        if frame_string.len() != 3 {
-            println!("Something went wrong parsing the frame argument!");
-            process::exit(1);
-        }
-        let can_socket_name: &String = &args[1];
-    */
     let can_socket_name: &str = arg_matches.value_of("socket").unwrap();
     let can_socket: CANSocket = match CANSocket::open(can_socket_name) {
         Ok(socket) => socket,
         Err(error) => {
             println!("Given name of socket: {}", can_socket_name);
             println!("Could not open socket! Error: {}", error);
-            help_screen();
             process::exit(1);
         }
     };
-    let frame_string: Vec<String> = arg_matches
+    let frame_string: String = arg_matches
         .value_of("frame")
         .unwrap()
-        .split("#")
-        .map(|s| s.to_string())
-        .collect();
-    let frame_id: u32 = frame_string[0].parse().unwrap();
-    let mut rtr: bool = false;
-    let mut eff: bool = false;
-    if u32::pow(2, 11) - 1 < frame_id {
-        // set extended ID flag in frame
-        eff = true;
-    }
-    let frame_data: String = frame_string[2].to_owned();
-    if frame_data == "R" {
-        // set RTR flag in frame
-        rtr = true;
-    }
-    let frame_data: &[u8] = frame_data.as_bytes();
-    if frame_data.len() > 8 {
-        println!("Too many data bytes given!");
-        // socket will be closed on deallocation so nothing to do here
-        process::exit(1);
-    }
-    let frame: CANFrame =
-        CANFrame::new(frame_id, frame_data, rtr, eff).expect("Error creating CANFrame!");
+        .to_owned();
 
+    let frame: CANFrame = parse_frame_string(frame_string)
+        .unwrap();
     // blocking write function
     match can_socket.write_frame_insist(&frame) {
         Ok(()) => {
