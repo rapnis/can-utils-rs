@@ -64,10 +64,37 @@ mod dut {
         }
     }
 
-    pub fn can_echo(socket: CANSocket) {
+    pub fn run(socket: CANSocket) {
         let mut frame_count: u32 = 0;
-
-
+        loop {
+            let received_frame: CANFrame = match socket.read_frame() {
+                Ok(frame) => frame,
+                Err(e) => {
+                    log::error!("Error receiving frame: {}", e);
+                    break;
+                },
+            };
+            match check_frame(received_frame) {
+                Ok(result) => {
+                    if result {
+                        match socket.write_frame_insist(
+                            &increment_frame(received_frame)
+                                .unwrap()
+                        ) {
+                            Ok(_) => continue,
+                            Err(e) => {
+                                log::error!("Error while writing frame! {}", e);
+                                break;
+                            },
+                        }
+                    } else {
+                        log::error!("Frame check did not pass!");
+                        break;
+                    }
+                },
+                Err(_) => log::error!("Error occured checking frame!"),
+            };
+        }
     }
 
     #[test]
