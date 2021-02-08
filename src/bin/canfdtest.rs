@@ -47,7 +47,20 @@ mod dut {
             }
             Ok(true)
         }
-    }   
+    }
+
+    fn increment_frame(frame: CANFrame) -> Option<CANFrame> {
+        let frame_id: u32 = frame.id() + 1;
+        let mut frame_data = vec![0; 8];
+        frame_data[..].clone_from_slice(&frame.data());
+        for i in 0..frame_data.len() {
+            frame_data[i] += 1;
+        }
+        match CANFrame::new(frame_id, &frame_data, false, false) {
+            Ok(frame) => Some(frame),
+            Err(_) => None,
+        }
+    }
 
     pub fn can_echo(socket: CANSocket) {
         let mut frame_count: u32 = 0;
@@ -80,6 +93,17 @@ mod dut {
         assert_eq!(true, check_frame(false_data_frame)
             .is_err()
         );
+    }
+
+    #[test]
+    fn test_frame_increment() {
+        let host_frame: CANFrame = CANFrame::new(0x77, &[1, 2, 3, 4, 5, 6, 7, 8], false, false)
+            .unwrap();
+        let incremented_frame: CANFrame = increment_frame(host_frame)
+            .unwrap();
+        
+        assert_eq!(0x78, incremented_frame.id());
+        assert_eq!(&[2, 3, 4, 5, 6, 7, 8, 9], incremented_frame.data());
     }
 }
 
