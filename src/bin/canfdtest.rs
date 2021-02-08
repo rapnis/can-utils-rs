@@ -53,7 +53,7 @@ mod dut {
 
     fn increment_frame(frame: CANFrame) -> Option<CANFrame> {
         let frame_id: u32 = frame.id() + 1;
-        let mut frame_data = vec![0; 8];
+        let mut frame_data = vec![0; frame.data().len() as usize];
         frame_data[..].clone_from_slice(&frame.data());
         for i in 0..frame_data.len() {
             frame_data[i] += 1;
