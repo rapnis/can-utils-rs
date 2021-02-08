@@ -1,4 +1,5 @@
 use clap::{App, Arg};
+use log;
 use socketcan::{CANFrame, CANSocket};
 
 static CAN_MSG_SIZE: u32 = 8;
@@ -42,6 +43,7 @@ mod dut {
         } else {
             for i in 1..frame.data().len() {
                 if (frame.data()[i - 1] + 1) != frame.data()[i] {
+                    log::debug!("Received data bytes: {:x?}", frame.data());
                     return Err(DutError::new("Received data byte mismatch!"));
                 }
             }
@@ -104,6 +106,18 @@ mod dut {
         
         assert_eq!(0x78, incremented_frame.id());
         assert_eq!(&[2, 3, 4, 5, 6, 7, 8, 9], incremented_frame.data());
+    }
+
+    #[test]
+    fn test_partial_frame_increment() {
+        // This should not occur during normal echo test, but it doesn't hurt to test it
+        let host_frame: CANFrame = CANFrame::new(0x77, &[1, 2, 3, 4], false, false)
+            .unwrap();
+        let incremented_frame: CANFrame = increment_frame(host_frame)
+            .unwrap();
+        
+        assert_eq!(0x78, incremented_frame.id());
+        assert_eq!(&[2, 3, 4, 5], incremented_frame.data());
     }
 }
 
