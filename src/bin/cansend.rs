@@ -33,20 +33,18 @@ fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
     let frame_id: u32 = frame_tokens[0]
         .parse()
         .unwrap();
-    let mut rtr: bool = false;
     let frame_data: String = frame_tokens[1].to_owned();
     if frame_data == "R" {
         // set RTR flag in frame
-        rtr = true;
         let frame: CANFrame = 
-            CANFrame::new(frame_id, &[], rtr, false)
+            CANFrame::new(frame_id, &[], true, false)
                 .expect("Error creating CAN-Remote-Frame");
         Some(frame)
     } else {
         let data_bytes: &[u8] = &(string_to_hex(frame_data).unwrap())[..];
         log::debug!("Frame bytes: {:x?}", data_bytes);
         let frame: CANFrame =
-            CANFrame::new(frame_id, data_bytes, rtr, false)
+            CANFrame::new(frame_id, data_bytes, false, false)
                 .expect("Error creating CAN-Frame!");
         Some(frame)
     }
