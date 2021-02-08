@@ -120,7 +120,7 @@ fn main() {
                             )
                             .arg(
                                 Arg::with_name("frame")
-                                    .help("Frameconsisting of ID and data")
+                                    .help("Frame consisting of ID and data")
                                     .index(2)
                                     .required(true),
                             )
