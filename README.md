@@ -1,2 +1,2 @@
 # can-utils-rs
-can-utils rewritten in rust (mainly for learning purpose)
+[can-utils](https://github.com/linux-can/can-utils "The famous original") rewritten in rust (mainly for learning purpose)
