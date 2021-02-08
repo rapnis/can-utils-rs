@@ -13,6 +13,7 @@ description = "Rusty implementation of famous can-utils (for learning purposes)"
 [dependencies]
 socketcan = "1.7.0"
 clap = "2.33.3"
+log = "0.4.14"
 
 [[bin]]
 name = "canfdtest"

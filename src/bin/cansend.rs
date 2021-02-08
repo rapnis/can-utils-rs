@@ -1,4 +1,5 @@
 use clap::{App, Arg};
+use log;
 use socketcan::{CANFrame, CANSocket};
 use std::process;
 
@@ -25,7 +26,7 @@ fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
         .split("#")
         .map(|s| s.to_string())
         .collect();
-    println!("Frame tokens: {:?}", frame_tokens);
+    log::debug!("Frame tokens: {:?}", frame_tokens);
     if frame_tokens.len() != 2 {
         return None;
     }
@@ -43,8 +44,7 @@ fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
         Some(frame)
     } else {
         let data_bytes: &[u8] = &(string_to_hex(frame_data).unwrap())[..];
-        // let frame_data: &[u8] = frame_data
-        println!("Frame bytes: {:x?}", data_bytes);
+        log::debug!("Frame bytes: {:x?}", data_bytes);
         let frame: CANFrame =
             CANFrame::new(frame_id, data_bytes, rtr, false)
                 .expect("Error creating CAN-Frame!");
@@ -54,13 +54,12 @@ fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
 
 #[test]
 fn test_frame_parsing() {
-    let test_frame: String = "123#cafe".to_owned();
+    let test_frame: String = "123#cafe"
+        .to_owned();
     let exptected_frame: CANFrame = CANFrame::new(123, &[0xca, 0xfe], false, false)
         .unwrap();
-
     let created_frame: CANFrame = parse_frame_string(test_frame)
         .unwrap();
-    // println!("Created frame: {:x?}\n Expected frame: {:x?}", created_frame, exptected_frame);
     assert_eq!(exptected_frame.id(), created_frame.id());
     assert_eq!(exptected_frame.is_extended(), created_frame.is_extended());
     assert_eq!(exptected_frame.is_rtr(), created_frame.is_rtr());
@@ -75,10 +74,8 @@ fn test_frame_parsing_remote() {
         .to_owned();
     let exptected_frame: CANFrame = CANFrame::new(444, &[], true, false)
         .unwrap();
-
     let created_frame: CANFrame = parse_frame_string(test_frame)
         .unwrap();
-    
     assert_eq!(exptected_frame.id(), created_frame.id());
     assert_eq!(exptected_frame.is_rtr(), created_frame.is_rtr());
     assert_eq!(exptected_frame.data().len(), created_frame.data().len());
@@ -90,10 +87,8 @@ fn test_frame_parsing_extended() {
         .to_owned();
     let exptected_frame: CANFrame = CANFrame::new(123123123, &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08], false, false)
         .unwrap();
-    
     let created_frame: CANFrame = parse_frame_string(test_frame)
         .unwrap();
-
     assert_eq!(exptected_frame.id(), created_frame.id());
     assert_eq!(exptected_frame.is_extended(), created_frame.is_extended());
     assert!(created_frame.is_extended());
@@ -137,8 +132,8 @@ fn main() {
     let can_socket: CANSocket = match CANSocket::open(can_socket_name) {
         Ok(socket) => socket,
         Err(error) => {
-            println!("Given name of socket: {}", can_socket_name);
-            println!("Could not open socket! Error: {}", error);
+            log::debug!("Given name of socket: {}", can_socket_name);
+            log::error!("Could not open socket! Error: {}", error);
             process::exit(1);
         }
     };
@@ -156,7 +151,7 @@ fn main() {
             process::exit(0)
         }
         Err(error) => {
-            println!("Error sending frame! Error: {}", error);
+            log::error!("Error sending frame! Error: {}", error);
             process::exit(1)
         }
     }
