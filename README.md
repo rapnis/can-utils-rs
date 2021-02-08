@@ -3,3 +3,5 @@
 
 ## cansend
 use this command to send a frame via CAN with ```cansend can0 <frame_id>#<data_bytes>```
+Tested on:
+ * x86_64
