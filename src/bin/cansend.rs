@@ -108,7 +108,7 @@ fn test_frame_parsing_extended() {
 ///
 fn main() {
     let arg_matches = App::new("cansend")
-                            .version("0.1.0")
+                            .version("0.1.1")
                             .author("Raphael Nissl")
                             .about("Program sets a CAN-Frame on a bus with given ID and data (does not support CAN FD protocol)")
                             .arg(
