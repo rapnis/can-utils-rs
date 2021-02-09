@@ -1,14 +1,62 @@
 use clap::{App, Arg};
 use log;
 use socketcan::{CANFrame, CANSocket};
+use std::process;
 
 static CAN_MSG_SIZE: u32 = 8;
 
 mod host {
     use socketcan::{CANFrame, CANSocket};
+    use std::fmt;
     
-    const DEFAULT_INFLIGHT_COUNT: u32 = 50;
+    const DEFAULT_INFLIGHT_COUNT: usize = 50;
     const CAN_MSG_ID: u32 = 0x77;
+
+    #[derive(Debug)]
+    pub struct HostError {
+        details: String
+    }
+
+    impl HostError {
+        fn new(msg: &str) -> HostError {
+            HostError{details: msg.to_string()}
+        }
+    }
+
+    struct Host {
+        socket: CANSocket,
+        inflight_count: usize,
+        loop_count: usize,
+    }
+
+    impl Host {
+
+        pub fn new(socket: &str, inflight_count: usize, loop_count: usize) -> Result<Host, HostError> {
+
+            let can: CANSocket = match CANSocket::open(socket) {
+                Ok(socket) => socket,
+                Err(_) => return Err(HostError::new("Error opening socket!")),
+            };
+
+            let host = Host {
+                socket: can,
+                inflight_count: inflight_count,
+                loop_count: loop_count,
+            };
+            Ok(host)
+        }
+
+        pub fn run(self) {
+            //TODO: implement method
+        }
+    }
+
+    impl fmt::Display for HostError {
+        //TODO: todo
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.details)
+        }
+    }
 
 }
 
