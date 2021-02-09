@@ -15,11 +15,15 @@ mod host {
 mod dut {
     use std::fmt;
     use socketcan::{CANFrame, CANSocket};
+
+    pub struct Dut {
+        socket: CANSocket,
+    }
     
     const CAN_MSG_ID: u32 = 0x77;
 
     #[derive(Debug)]
-    struct DutError {
+    pub struct DutError {
         details: String
     }
 
@@ -64,40 +68,53 @@ mod dut {
         }
     }
 
-    pub fn run(socket: CANSocket) {
-        let mut frame_count: usize = 0;
-        loop {
-            let received_frame: CANFrame = match socket.read_frame() {
-                Ok(frame) => frame,
-                Err(e) => {
-                    log::error!("Error receiving frame: {}", e);
-                    break;
-                },
+    impl Dut {
+        pub fn new(socket_name: &str) -> Result<Dut, DutError> {
+            let can: CANSocket = match CANSocket::open(socket_name) {
+                Ok(socket) => socket,
+                Err(_) => return Err(DutError::new("Could not open socket")),
             };
-            match check_frame(received_frame) {
-                Ok(result) => {
-                    if result {
-                        let frame: CANFrame = match increment_frame(received_frame) {
-                            None => {
-                                log::error!("Error incrementing frame for sending!");
-                                break;
-                            },
-                            Some(f) => f,
-                        };
-                        match socket.write_frame_insist(&frame) {
-                            Ok(_) => continue,
-                            Err(e) => {
-                                log::error!("Error while writing frame! {}", e);
-                                break;
-                            },
-                        }
-                    } else {
-                        log::error!("Frame check did not pass!");
+            let dut = Dut {
+                socket: can,
+            };
+            Ok(dut)
+        }
+
+        pub fn run(self) {
+            let mut frame_count: usize = 0;
+            loop {
+                let received_frame: CANFrame = match self.socket.read_frame() {
+                    Ok(frame) => frame,
+                    Err(e) => {
+                        log::error!("Error receiving frame: {}", e);
                         break;
-                    }
-                },
-                Err(_) => log::error!("Error occured checking frame!"),
-            };
+                    },
+                };
+                match check_frame(received_frame) {
+                    Ok(result) => {
+                        if result {
+                            let frame: CANFrame = match increment_frame(received_frame) {
+                                None => {
+                                    log::error!("Error incrementing frame for sending!");
+                                    break;
+                                },
+                                Some(f) => f,
+                            };
+                            match self.socket.write_frame_insist(&frame) {
+                                Ok(_) => continue,
+                                Err(e) => {
+                                    log::error!("Error while writing frame! {}", e);
+                                    break;
+                                },
+                            }
+                        } else {
+                            log::error!("Frame check did not pass!");
+                            break;
+                        }
+                    },
+                    Err(_) => log::error!("Error occured checking frame!"),
+                };
+            }
         }
     }
 
