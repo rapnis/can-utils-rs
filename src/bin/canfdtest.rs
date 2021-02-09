@@ -77,10 +77,14 @@ mod dut {
             match check_frame(received_frame) {
                 Ok(result) => {
                     if result {
-                        match socket.write_frame_insist(
-                            &increment_frame(received_frame)
-                                .unwrap()
-                        ) {
+                        let frame: CANFrame = match increment_frame(received_frame) {
+                            None => {
+                                log::error!("Error incrementing frame for sending!");
+                                break;
+                            },
+                            Some(f) => f,
+                        };
+                        match socket.write_frame_insist(&frame) {
                             Ok(_) => continue,
                             Err(e) => {
                                 log::error!("Error while writing frame! {}", e);
