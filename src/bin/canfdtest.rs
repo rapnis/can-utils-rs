@@ -84,7 +84,11 @@ mod dut {
             let mut frame_count: usize = 0;
             loop {
                 let received_frame: CANFrame = match self.socket.read_frame() {
-                    Ok(frame) => frame,
+                    Ok(frame) => {
+                        log::debug!{"Received frame: {:x?}", &frame};
+                        frame_count += 1;
+                        frame
+                    },
                     Err(e) => {
                         log::error!("Error receiving frame: {}", e);
                         break;
@@ -101,6 +105,7 @@ mod dut {
                                 Some(f) => f,
                             };
                             match self.socket.write_frame_insist(&frame) {
+                                //TODO: implement wait time for interleaving mode, i.e. a wait time
                                 Ok(_) => continue,
                                 Err(e) => {
                                     log::error!("Error while writing frame! {}", e);
@@ -115,6 +120,7 @@ mod dut {
                     Err(_) => log::error!("Error occured checking frame!"),
                 };
             }
+            log::info!("Received {} frames.", frame_count);
         }
     }
 
@@ -197,13 +203,47 @@ pub fn main() {
                                 Arg::with_name("inflight")
                                     .help("inflight count")
                                     .short("f")
-                                    .takes_value(true),
+                                    .takes_value(true)
+                                    .requires("generator"),
                             )
                             .arg(
                                 Arg::with_name("loop_count")
                                 .help("test loop count")
                                 .short("l")
-                                .takes_value(true),
+                                .takes_value(true)
+                                .requires("generator"),
                             )
                             .get_matches();
+    
+    //TODO: select logging framework... maybe fern or something else...
+    match arg_matches.occurrences_of("verbosity") {
+        0 => log::error!("I.O.U.  level setting"),
+        1 => log::info!("I.O.U. logging level setting"),
+        2 => log::warn!("I.O.U. logging level setting"),
+        3 => log::debug!("I.O.U. logging level setting"),
+        _ => log::error!("I.O.U. logging level setting"),
+    }
+    let socket_name: &str = match arg_matches.value_of("socket") {
+        Some(s) => s,
+        None => {
+            log::error!("No valid program argument for socket given!");
+            process::exit(1);
+        },
+    };
+    if arg_matches.is_present("generator") {
+        //TODO implement stuff
+        log::warn!("Not impleemented yet!");
+        process::exit(0);
+    } else {
+        let dut: dut::Dut = match dut::Dut::new(socket_name) {
+            Ok(r) => r,
+            Err(e) => {
+                log::error!("Could not instantiate DUT! Reasong: {}", e);
+                process::exit(1);
+            },
+        };
+        //TODO: give run Result as return type to exit program with exit code accordingly
+        dut.run();
+        process::exit(0);
+    }
 }
