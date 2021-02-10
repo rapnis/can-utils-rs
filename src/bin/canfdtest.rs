@@ -1,15 +1,15 @@
 use clap::{App, Arg};
 use log;
-use socketcan::{CANFrame, CANSocket};
 use std::process;
 
-static CAN_MSG_SIZE: u32 = 8;
+const DEFAULT_INFLIGHT_COUNT: usize = 50;
 
 mod host {
     use socketcan::{CANFrame, CANSocket};
     use std::fmt;
-    
-    const DEFAULT_INFLIGHT_COUNT: usize = 50;
+    use std::time::{Duration};
+    use std::thread;
+
     const CAN_MSG_ID: u32 = 0x77;
 
     #[derive(Debug)]
@@ -48,6 +48,52 @@ mod host {
 
         pub fn run(self) {
             //TODO: implement method
+            let mut byte_counter: u8 = 0;
+            let mut index: usize = 0;
+            let mut tx_frames: Vec<CANFrame> = Vec::with_capacity(self.inflight_count);
+            let mut response: Vec<bool> = Vec::with_capacity(self.inflight_count);
+            // let mut unresponeded_count: usize = 0;
+
+            loop {
+                if response.len() < self.inflight_count {
+                    response.push(false);
+                    let mut data_bytes: Vec<u8> = Vec::new();
+                    for i in 0..data_bytes.len() {
+                        data_bytes[i] = byte_counter + 1;
+                    }
+                    let frame: CANFrame = match CANFrame::new(CAN_MSG_ID, &data_bytes[..], false, false) {
+                        Ok(f) => f,
+                        Err(_) => {
+                            log::error!("Could not create frame for sending! At index {}", index);
+                            break;
+                        },
+                    };
+                    match self.socket.write_frame_insist(&frame) {
+                        Ok(_) => {
+                            tx_frames[index] = frame;
+                        },
+                        Err(_) => {
+                            log::error!("Could not send frame! Frame: {:x?} at index {}", &frame, index);
+                            break;
+                        },
+                    }
+                    // TODO: check this part particularly
+                    if index + 1 == self.inflight_count {
+                        index = 0;
+                    } else {
+                        index += 1;
+                    }
+                    byte_counter += 1;
+                    if byte_counter % 33 == 0 {
+                        thread::sleep(Duration::from_millis(3));
+                    } else {
+                        thread::sleep(Duration::from_millis(1));
+                    }
+                    
+                } else {
+
+                }
+            }
         }
     }
 
@@ -57,7 +103,6 @@ mod host {
             write!(f, "{}", self.details)
         }
     }
-
 }
 
 mod dut {
@@ -286,7 +331,7 @@ pub fn main() {
         let dut: dut::Dut = match dut::Dut::new(socket_name) {
             Ok(r) => r,
             Err(e) => {
-                log::error!("Could not instantiate DUT! Reasong: {}", e);
+                log::error!("Could not instantiate DUT! Reason: {}", e);
                 process::exit(1);
             },
         };
