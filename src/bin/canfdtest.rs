@@ -5,6 +5,7 @@ use std::process;
 const DEFAULT_INFLIGHT_COUNT: usize = 50;
 
 mod host {
+    use log;
     use socketcan::{CANFrame, CANSocket};
     use std::fmt;
     use std::time::{Duration};
@@ -106,6 +107,7 @@ mod host {
 }
 
 mod dut {
+    use log;
     use std::fmt;
     use socketcan::{CANFrame, CANSocket};
 
@@ -328,6 +330,7 @@ pub fn main() {
         log::warn!("Not impleemented yet!");
         process::exit(0);
     } else {
+        log::info!("Starting as DUT.");
         let dut: dut::Dut = match dut::Dut::new(socket_name) {
             Ok(r) => r,
             Err(e) => {
