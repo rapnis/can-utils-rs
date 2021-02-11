@@ -141,7 +141,12 @@ mod dut {
             Err(DutError::new("Received message ID mismatch!"))
         } else {
             for i in 1..frame.data().len() {
-                if (frame.data()[i - 1] + 1) != frame.data()[i] {
+                let byte: u8 = if frame.data()[i] == 0  {
+                    0
+                } else {
+                    frame.data()[i] - 1
+                };
+                if frame.data()[i - 1] != byte {
                     log::debug!("Received data bytes: {:x?}", frame.data());
                     return Err(DutError::new("Received data byte mismatch!"));
                 }
@@ -154,8 +159,14 @@ mod dut {
         let frame_id: u32 = frame.id() + 1;
         let mut frame_data: Vec<u8> = vec![0; frame.data().len() as usize];
         frame_data[..].clone_from_slice(&frame.data());
+        log::debug!("Frame data {:x?}", &frame_data);
         for i in 0..frame_data.len() {
-            frame_data[i] += 1;
+            // handled attempt to add with overflow
+            if frame_data[i] >= 255 {
+                frame_data[i] = 0;
+            } else {
+                frame_data[i] += 1;
+            }
         }
         match CANFrame::new(frame_id, &frame_data, false, false) {
             Ok(frame) => Some(frame),
