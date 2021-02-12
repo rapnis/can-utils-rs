@@ -283,7 +283,7 @@ mod dut {
 
 pub fn main() {
     let arg_matches = App::new("canfdtest")
-                            .version("0.0.1")
+                            .version("0.1.0")
                             .author("Raphael Nissl")
                             .about("Echoing CAN frames between a host and a DUT")
                             .arg(
