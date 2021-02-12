@@ -18,7 +18,7 @@ use this command to send a frame via CAN with ```cansend <socket_name> <frame_id
 Echoes frames between a host and a device under test. Sends frames with fixed length and continuous data bytes.  
 Does not supprot CAN FD protocol.
 
-Start as DUT: ```canfdtest <socke_name>```
+Start as DUT: ```canfdtest <socket_name>```
 
 #### Open Topics:
 - Source code documentation  
