@@ -108,7 +108,7 @@ fn test_frame_parsing_extended() {
 ///
 fn main() {
     let arg_matches = App::new("cansend")
-                            .version("0.1.0")
+                            .version("0.1.1")
                             .author("Raphael Nissl")
                             .about("Program sets a CAN-Frame on a bus with given ID and data (does not support CAN FD protocol)")
                             .arg(
@@ -126,7 +126,13 @@ fn main() {
                             )
                             .get_matches();
 
-    let can_socket_name: &str = arg_matches.value_of("socket").unwrap();
+    let can_socket_name: &str = match arg_matches.value_of("socket") {
+        Some(s) => s,
+        None => {
+            log::error!("No valid socket-name given!");
+            process::exit(1);
+        },
+    };
     let can_socket: CANSocket = match CANSocket::open(can_socket_name) {
         Ok(socket) => socket,
         Err(error) => {

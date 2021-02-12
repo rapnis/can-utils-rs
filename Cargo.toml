@@ -1,7 +1,7 @@
 [package]
 name = "can_utils"
 version = "0.0.5"
-authors = ["Raphael Nissl <raphael@nissl.net>"]
+authors = ["Raphael Nissl <raphael.nissl@baremetal-systems.com>"]
 edition = "2018"
 repository = "https://github.com:rapnis/can-utils-rs.git"
 license = "GPL3"
