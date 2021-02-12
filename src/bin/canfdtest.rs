@@ -142,7 +142,7 @@ mod dut {
         } else {
             for i in 1..frame.data().len() {
                 let byte: u8 = if frame.data()[i] == 0  {
-                    0
+                    0xff
                 } else {
                     frame.data()[i] - 1
                 };
