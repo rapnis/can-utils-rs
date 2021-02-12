@@ -279,6 +279,17 @@ mod dut {
         assert_eq!(0x78, incremented_frame.id());
         assert_eq!(&[2, 3, 4, 5], incremented_frame.data());
     }
+
+    #[test]
+    fn test_overflow_increment() {
+        // test for problem fixed in commit '1af70af034f7c4c20ad63a5e3127875b9bee6533'
+        let host_frame: CANFrame = CANFrame::new(0x77, &[0xf9, 0xfa , 0xfb, 0xfc, 0xfd, 0xfe, 0xff, 0x00], false, false)
+            .unwrap();
+        let incremented_frame: CANFrame = increment_frame(host_frame)
+            .unwrap();
+
+        assert_eq!(&[0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff, 0x00, 0x01], incremented_frame.data());
+    }
 }
 
 pub fn main() {
