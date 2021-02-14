@@ -95,7 +95,7 @@ mod host {
                     f
                 },
                 Err(e) => {
-                    log::debug!("Could not create filter for receiving own messages!");
+                    log::debug!("Could not create filter for receiving own messages! Error: {}", e);
                     return Err(HostError::new("Failed to create filter for socket option"));
                 },
             };
@@ -172,6 +172,7 @@ mod host {
                     };
                     // TODO: check own frame
                     if received_frame.id() == CAN_MSG_ID {
+                        log::debug!("Received own frame.");
                         response[index] = match Host::compare_frame(tx_frames[index], received_frame, 0) {
                             Ok(result) => {
                                 result
@@ -184,6 +185,7 @@ mod host {
                             break;
                         }
                     } else {
+                        log::debug!("Received DUT frame.");
                         match Host::compare_frame(tx_frames[index], received_frame, 1) {
                             Ok(result) => {
                                 if result {
