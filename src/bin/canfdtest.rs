@@ -140,7 +140,7 @@ mod host {
                     };
                     match self.socket.write_frame_insist(&frame) {
                         Ok(_) => {
-                            tx_frames[index] = frame;
+                            tx_frames.push(frame);
                         },
                         Err(_) => {
                             log::error!("Could not send frame! Frame: {:x?} at index {}", &frame, index);
