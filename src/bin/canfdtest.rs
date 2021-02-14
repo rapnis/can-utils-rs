@@ -118,7 +118,6 @@ mod host {
         }
 
         pub fn run(self) {
-            //TODO: implement method
             let mut byte_counter: u8 = 0;
             let mut index: usize = 0;
             let mut tx_frames: Vec<CANFrame> = Vec::with_capacity(self.inflight_count);
@@ -128,9 +127,9 @@ mod host {
             loop {
                 if response.len() < self.inflight_count {
                     response.push(false);
-                    let mut data_bytes: Vec<u8> = Vec::new();
-                    for i in 0..data_bytes.len() {
-                        data_bytes[i] = byte_counter + 1;
+                    let mut data_bytes: [u8;8] = [0; 8];
+                    for i in 0..data_bytes.len() {;
+                        data_bytes[i] = byte_counter + i as u8;
                     }
                     let frame: CANFrame = match CANFrame::new(CAN_MSG_ID, &data_bytes[..], false, false) {
                         Ok(f) => f,
