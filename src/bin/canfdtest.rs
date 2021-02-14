@@ -473,8 +473,15 @@ pub fn main() {
         },
     };
     if arg_matches.is_present("generator") {
-        //TODO implement stuff
-        log::warn!("Not impleemented yet!");
+        //TODO set socket options to receive own frames
+        let host: host::Host = match host::Host::new(socket_name, DEFAULT_INFLIGHT_COUNT, 0) {
+            Ok(h) => h,
+            Err(e) => {
+                log::error!("Could not instantiate Host/Generator! Reason: {}", e);
+                process::exit(1);
+            },
+        };
+        host.run();
         process::exit(0);
     } else {
         log::info!("Starting as DUT.");
