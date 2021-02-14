@@ -44,7 +44,7 @@ mod host {
         }
     }
 
-    struct Host {
+    pub struct Host {
         socket: CANSocket,
         inflight_count: usize,
         loop_count: usize,
@@ -87,6 +87,27 @@ mod host {
                 Ok(socket) => socket,
                 Err(_) => return Err(HostError::new("Error opening socket!")),
             };
+
+            //TODO: set sockopt to receive own frames
+            let filter: CANFilter = match CANFilter::new(4, 1) {
+                Ok(f) => {
+                    log::debug!("Creating filter for redceiving own messages");
+                    f
+                },
+                Err(e) => {
+                    log::debug!("Could not create filter for receiving own messages!");
+                    return Err(HostError::new("Failed to create filter for socket option"));
+                },
+            };
+            match can.set_filter(&[filter]) {
+                Ok(_) => {
+                    log::debug!("Set up filter for receiving own messages");
+                },
+                Err(_) => {
+                    log::error!("Error setting socket option for Host mode!");
+                    return Err(HostError::new("Could not set filter for Host mode!"));
+                },
+            }
 
             let host = Host {
                 socket: can,
