@@ -214,6 +214,7 @@ mod host {
         assert!(Host::compare_frame(test_frame, test_frame, 0).unwrap());
     }
 
+    #[test]
     fn test_compare_incremented_received() {
         let expected_frame: CANFrame = CANFrame::new(0x77, &[1, 2, 3, 4, 5, 6, 7, 8], false, false)
             .unwrap();
