@@ -128,7 +128,7 @@ mod host {
                 if response.len() < self.inflight_count {
                     response.push(false);
                     let mut data_bytes: [u8;8] = [0; 8];
-                    for i in 0..data_bytes.len() {;
+                    for i in 0..data_bytes.len() {
                         data_bytes[i] = byte_counter + i as u8;
                     }
                     let frame: CANFrame = match CANFrame::new(CAN_MSG_ID, &data_bytes[..], false, false) {
