@@ -170,7 +170,6 @@ mod host {
                             break;
                         },
                     };
-                    // TODO: check own frame
                     if received_frame.id() == CAN_MSG_ID {
                         log::debug!("Received own frame.");
                         response[index] = match Host::compare_frame(tx_frames[index], received_frame, 0) {
