@@ -113,7 +113,7 @@ mod host {
                     for i in 0..data_bytes.len() {
                         let counted_bytes: usize = byte_counter as usize;
                         let byte: u8 = if counted_bytes + i > 255 {
-                            let result: usize = counted_bytes + i - 255;
+                            let result: usize = counted_bytes + i - 256;
                             result as u8
                         } else {
                             byte_counter + i as u8
