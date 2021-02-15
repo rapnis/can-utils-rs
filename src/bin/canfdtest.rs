@@ -100,46 +100,54 @@ mod host {
 
         pub fn run(self) {
             let mut byte_counter: u8 = 0;
-            let mut index: usize = 0;
-            let mut tx_frames: Vec<CANFrame> = Vec::with_capacity(self.inflight_count);
-            let mut response: Vec<bool> = Vec::with_capacity(self.inflight_count);
-            // let mut unresponeded_count: usize = 0;
+            let mut unprocessed_count: usize = 0;
+            let mut _loop_count: usize = 0;
+            let mut tx_frames: Vec<CANFrame> = Vec::with_capacity(self.inflight_count); 
+            // let mut response: Vec<bool> = Vec::with_capacity(self.inflight_count);
 
             loop {
-                if response.len() < self.inflight_count {
-                    response.push(false);
+                if unprocessed_count < self.inflight_count {
+                    // line is commented out since checking for own frames is not possible ATM
+                    // response.push(true);
                     let mut data_bytes: [u8;8] = [0; 8];
                     for i in 0..data_bytes.len() {
-                        data_bytes[i] = byte_counter + i as u8;
+                        let counted_bytes: usize = byte_counter as usize;
+                        let byte: u8 = if counted_bytes + i > 255 {
+                            let result: usize = counted_bytes + i - 255;
+                            result as u8
+                        } else {
+                            byte_counter + i as u8
+                        };
+                        data_bytes[i] = byte; //_counter + i as u8;
                     }
                     let frame: CANFrame = match CANFrame::new(CAN_MSG_ID, &data_bytes[..], false, false) {
                         Ok(f) => f,
                         Err(_) => {
-                            log::error!("Could not create frame for sending! At index {}", index);
+                            log::error!("Could not create frame for sending! At index {}", &tx_frames.len());
                             break;
                         },
                     };
                     match self.socket.write_frame_insist(&frame) {
                         Ok(_) => {
+                            // tx_frames.push(frame);
                             tx_frames.push(frame);
                         },
                         Err(_) => {
-                            log::error!("Could not send frame! Frame: {:x?} at index {}", &frame, index);
+                            log::error!("Could not send frame! Frame: {:x?} at index {}", &frame, &tx_frames.len());
                             break;
                         },
                     }
-                    // TODO: check this part particularly
-                    if index + 1 == self.inflight_count {
-                        index = 0;
+                    if byte_counter == 255 {
+                        byte_counter = 0;
                     } else {
-                        index += 1;
+                        byte_counter += 1;
                     }
-                    byte_counter += 1;
+                    unprocessed_count += 1;
                     if byte_counter % 33 == 0 {
                         thread::sleep(Duration::from_millis(3));
                     } else {
                         thread::sleep(Duration::from_millis(1));
-                    }                  
+                    }
                 } else {
                     let received_frame: CANFrame = match self.socket.read_frame() {
                         Ok(frame) => {
@@ -151,39 +159,39 @@ mod host {
                             break;
                         },
                     };
-                    log::debug!("Received Frame: {:x?}", received_frame);
-                    if received_frame.id() == CAN_MSG_ID {
-                        log::debug!("Received own frame.");
-                        response[index] = match Host::compare_frame(tx_frames[index], received_frame, 0) {
-                            Ok(result) => {
-                                result
-                            },
-                            Err(_) => false,
-                        };
-                        if response[index] {
-                            continue;
-                        } else {
-                            break;
-                        }
-                    } else {
-                        log::debug!("Received DUT frame.");
-                        match Host::compare_frame(tx_frames[index], received_frame, 1) {
-                            Ok(result) => {
-                                if result {
-                                    // loop_count += 1;
-                                    continue;
-                                } else {
-                                    break;
-                                }
-                            },
-                            Err(_) => break,
-                        }
-                        // if loop_count && self.loop_count >= loop_count {
-                        //     break;
-                        // } else {
-                        //     index -= 1;
-                        // }
-                    }
+
+                    //TODO: receiving own frame is possible with version 2.0.0 of crate socketcan (but does not build)
+                    // if received_frame.id() == CAN_MSG_ID {
+                    //     log::debug!("Received own frame.");
+                    //     response[index] = match Host::compare_frame(tx_frames[index], received_frame, 0) {
+                    //         Ok(result) => {
+                    //             result
+                    //         },
+                    //         Err(_) => false,
+                    //     };
+                    // } else {
+                        // if response[&rx_index] {
+                            log::debug!("Received DUT frame.");
+                            let expected_frame: CANFrame = tx_frames.remove(0);
+                            match Host::compare_frame(expected_frame, received_frame, 1) {
+                                Ok(result) => {
+                                    if result {
+                                        // loop_count += 1;
+                                        log::debug!("Frame comparison passed.");
+                                        unprocessed_count -= 1;
+                                        continue;
+                                    } else {
+                                        log::error!("Frame comparison failed!");
+                                        break;
+                                    }
+                                },
+                                Err(_) => break,
+                            }
+                    //     } else {
+                    //         log::error!("Did not receive own frame! Rx before Tx!");
+                    //         break;
+                    //     }
+                    // }
                 }
             }
         }
