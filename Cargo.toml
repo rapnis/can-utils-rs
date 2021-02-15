@@ -14,6 +14,7 @@ description = "Rusty implementation of famous can-utils (for learning purposes)"
 socketcan = "1.7.0"
 clap = "2.33.3"
 log = "0.4.14"
+simple_logger = "1.11.0"
 
 [[bin]]
 name = "canfdtest"
