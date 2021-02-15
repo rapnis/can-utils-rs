@@ -230,6 +230,15 @@ mod host {
             write!(f, "{}", self.details)
         }
     }
+
+    #[test]
+    fn test_false_incremented_received() {
+        let expected_frame: CANFrame = CANFrame::new(0x77, &[1, 2, 3, 4, 5, 6, 7, 8], false, false)
+            .unwrap();
+        let test_frame: CANFrame = CANFrame::new(0x78, &[2, 3, 4, 5, 7, 8, 9, 10], false, false)
+            .unwrap();
+        assert_eq!(false, Host::compare_frame(expected_frame, test_frame, 1).unwrap());
+    }
 }
 
 mod dut {
