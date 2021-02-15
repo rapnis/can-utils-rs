@@ -47,7 +47,7 @@ mod host {
     pub struct Host {
         socket: CANSocket,
         inflight_count: usize,
-        loop_count: usize,
+        frame_count: usize,
     }
 
     impl Host {
@@ -81,7 +81,7 @@ mod host {
              }
         }
 
-        pub fn new(socket: &str, inflight_count: usize, loop_count: usize) -> Result<Host, HostError> {
+        pub fn new(socket: &str, inflight_count: usize, frame_count: usize) -> Result<Host, HostError> {
 
             let can: CANSocket = match CANSocket::open(socket) {
                 Ok(socket) => socket,
@@ -89,9 +89,9 @@ mod host {
             };
 
             //TODO: set sockopt to receive own frames
-            let filter: CANFilter = match CANFilter::new(4, 1) {
+            let filter: CANFilter = match CANFilter::new(4, 0) {
                 Ok(f) => {
-                    log::debug!("Creating filter for redceiving own messages");
+                    log::debug!("Creating filter for receiving own messages");
                     f
                 },
                 Err(e) => {
@@ -112,7 +112,7 @@ mod host {
             let host = Host {
                 socket: can,
                 inflight_count: inflight_count,
-                loop_count: loop_count,
+                frame_count: frame_count,
             };
             Ok(host)
         }
@@ -460,8 +460,8 @@ pub fn main() {
                                     .requires("generator"),
                             )
                             .arg(
-                                Arg::with_name("loop_count")
-                                .help("test loop count")
+                                Arg::with_name("frame_count")
+                                .help("test frame count")
                                 .short("l")
                                 .takes_value(true)
                                 .requires("generator"),
@@ -499,7 +499,6 @@ pub fn main() {
         },
     };
     if arg_matches.is_present("generator") {
-        //TODO set socket options to receive own frames
         let host: host::Host = match host::Host::new(socket_name, DEFAULT_INFLIGHT_COUNT, 0) {
             Ok(h) => h,
             Err(e) => {
