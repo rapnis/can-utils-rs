@@ -23,6 +23,7 @@ Start as DUT: ```canfdtest <socket_name>```
 #### Open Topics:
 - Source code documentation  
 - Verbose outputs/Logging  
+- Progress printing
 - Host part of echo program  
 
 #### DUT part tested on:
