@@ -1,7 +1,8 @@
 use clap::{App, Arg};
-use log;
+use log::LevelFilter;
 use std::process;
 use socketcan::CANFrame;
+use simple_logger::SimpleLogger;
 
 const DEFAULT_INFLIGHT_COUNT: usize = 50;
 
@@ -9,7 +10,6 @@ fn increment_frame(frame: CANFrame) -> Option<CANFrame> {
     let frame_id: u32 = frame.id() + 1;
     let mut frame_data: Vec<u8> = vec![0; frame.data().len() as usize];
     frame_data[..].clone_from_slice(&frame.data());
-    log::debug!("Frame data {:x?}", &frame_data);
     for i in 0..frame_data.len() {
         // handled attempt to add with overflow
         if frame_data[i] >= 255 {
@@ -170,6 +170,7 @@ mod host {
                             break;
                         },
                     };
+                    log::debug!("Received Frame: {:x?}", received_frame);
                     if received_frame.id() == CAN_MSG_ID {
                         log::debug!("Received own frame.");
                         response[index] = match Host::compare_frame(tx_frames[index], received_frame, 0) {
@@ -469,11 +470,26 @@ pub fn main() {
     
     //TODO: select logging framework... maybe fern or something else...
     match arg_matches.occurrences_of("verbosity") {
-        0 => log::error!("I.O.U.  level setting"),
-        1 => log::info!("I.O.U. logging level setting"),
-        2 => log::warn!("I.O.U. logging level setting"),
-        3 => log::debug!("I.O.U. logging level setting"),
-        _ => log::error!("I.O.U. logging level setting"),
+        0 => SimpleLogger::new()
+                .with_level(LevelFilter::Error)
+                .init()
+                .unwrap(),
+        1 => SimpleLogger::new()
+                .with_level(LevelFilter::Info)
+                .init()
+                .unwrap(),
+        2 => SimpleLogger::new()
+                .with_level(LevelFilter::Warn)
+                .init()
+                .unwrap(),
+        3 => SimpleLogger::new()
+                .with_level(LevelFilter::Debug)
+                .init()
+                .unwrap(),
+        _ => SimpleLogger::new()
+                .with_level(LevelFilter::Error)
+                .init()
+                .unwrap(),
     }
     let socket_name: &str = match arg_matches.value_of("socket") {
         Some(s) => s,
