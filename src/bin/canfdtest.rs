@@ -26,7 +26,7 @@ fn increment_frame(frame: CANFrame) -> Option<CANFrame> {
 
 mod host {
     use log;
-    use socketcan::{CANFrame, CANSocket, CANFilter};
+    use socketcan::{CANFrame, CANSocket};
     use std::fmt;
     use std::time::{Duration};
     use std::thread;
@@ -87,27 +87,8 @@ mod host {
                 Ok(socket) => socket,
                 Err(_) => return Err(HostError::new("Error opening socket!")),
             };
-
             //TODO: set sockopt to receive own frames
-            let filter: CANFilter = match CANFilter::new(4, 0) {
-                Ok(f) => {
-                    log::debug!("Creating filter for receiving own messages");
-                    f
-                },
-                Err(e) => {
-                    log::debug!("Could not create filter for receiving own messages! Error: {}", e);
-                    return Err(HostError::new("Failed to create filter for socket option"));
-                },
-            };
-            match can.set_filter(&[filter]) {
-                Ok(_) => {
-                    log::debug!("Set up filter for receiving own messages");
-                },
-                Err(_) => {
-                    log::error!("Error setting socket option for Host mode!");
-                    return Err(HostError::new("Could not set filter for Host mode!"));
-                },
-            }
+            //can.set_recv_own_msg(); -> not supported in socketcan crate as of version 1.7.0
 
             let host = Host {
                 socket: can,
