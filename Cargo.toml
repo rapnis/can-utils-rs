@@ -11,7 +11,7 @@ description = "Rusty implementation of famous can-utils (for learning purposes)"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-socketcan = "1.7.0"
+socketcan = { version = "2.0.0", git = "https://github.com/rapnis/socketcan-rs", branch = "master" }
 clap = "2.33.3"
 log = "0.4.14"
 simple_logger = "1.11.0"
