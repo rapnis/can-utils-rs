@@ -1,6 +1,9 @@
 # can-utils-rs
-
 [can-utils](https://github.com/linux-can/can-utils "The famous original") rewritten in rust (mainly for learning purpose)
+
+## NIGHTLY
+Uses version 2.0.0 of `socketcan-rs` repository. Said version is not available via published crate, uses also a fork of `netlink-rs` repository that does not build due missing type annotations.  
+This branch uses forks of said projects to be buildable.
 
 ## cansend
 
