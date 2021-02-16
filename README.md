@@ -18,10 +18,10 @@ Examples: ```cansend can0 008#R``` ```cansend can0 10000#cafeaffe```
 ## canfdtest
 
 Echoes frames between a host and a device under test. Sends frames with fixed length and continuous data bytes.  
-Does not supprot CAN FD protocol.
+Does not supprot CAN FD protocol.  
 DEVIATION TO ORIGINAL: Host does not receive own messages after sending! (This is currently not supported)
 
-Start as DUT: ```canfdtest <socket_name>```
+Start as DUT: ```canfdtest <socket_name>```  
 Start as Host: ```canfdtest <socket_name> -g``` (other flags are not supported as of now)
 
 #### Open Topics:
@@ -30,3 +30,6 @@ Start as Host: ```canfdtest <socket_name> -g``` (other flags are not supported a
 
 #### DUT part tested on:
 - x86_64 
+
+#### Host part tested on:
+- x86_64
