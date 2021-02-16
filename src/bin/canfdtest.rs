@@ -1,12 +1,12 @@
 use clap::{App, Arg};
 use log::LevelFilter;
 use std::process;
-use socketcan::CANFrame;
+use socketcan::CanFrame;
 use simple_logger::SimpleLogger;
 
 const DEFAULT_INFLIGHT_COUNT: usize = 50;
 
-fn increment_frame(frame: CANFrame) -> Option<CANFrame> {
+fn increment_frame(frame: CanFrame) -> Option<CanFrame> {
     let frame_id: u32 = frame.id() + 1;
     let mut frame_data: Vec<u8> = vec![0; frame.data().len() as usize];
     frame_data[..].clone_from_slice(&frame.data());
@@ -18,7 +18,7 @@ fn increment_frame(frame: CANFrame) -> Option<CANFrame> {
             frame_data[i] += 1;
         }
     }
-    match CANFrame::new(frame_id, &frame_data, false, false) {
+    match CanFrame::new(frame_id, &frame_data, false, false) {
         Ok(frame) => Some(frame),
         Err(_) => None,
     }
@@ -26,7 +26,7 @@ fn increment_frame(frame: CANFrame) -> Option<CANFrame> {
 
 mod host {
     use log;
-    use socketcan::{CANFrame, CANSocket};
+    use socketcan::{CanFrame, CanSocket};
     use std::fmt;
     use std::time::{Duration};
     use std::thread;
@@ -45,14 +45,14 @@ mod host {
     }
 
     pub struct Host {
-        socket: CANSocket,
+        socket: CanSocket,
         inflight_count: usize,
         frame_count: usize,
     }
 
     impl Host {
 
-        fn compare_frame(expected_frame: CANFrame, received_frame: CANFrame, increment: usize) -> Result<bool, HostError> {
+        fn compare_frame(expected_frame: CanFrame, received_frame: CanFrame, increment: usize) -> Result<bool, HostError> {
             if increment == 0 {
                 if expected_frame.id() != received_frame.id() {
                     log::error!("Expected ID: {}, Received ID: {}", expected_frame.id(), received_frame.id());
@@ -69,7 +69,7 @@ mod host {
                 }
                 Ok(true)
              } else {
-                 let new_expected_frame: CANFrame = match super::increment_frame(expected_frame) {
+                 let new_expected_frame: CanFrame = match super::increment_frame(expected_frame) {
                      Some(f) => f,
                      None => return Err(HostError::new("Could not compare expteded receive from DUT!")),
                  };
@@ -83,7 +83,7 @@ mod host {
 
         pub fn new(socket: &str, inflight_count: usize, frame_count: usize) -> Result<Host, HostError> {
 
-            let can: CANSocket = match CANSocket::open(socket) {
+            let can: CanSocket = match CanSocket::open(socket) {
                 Ok(socket) => socket,
                 Err(_) => return Err(HostError::new("Error opening socket!")),
             };
@@ -102,7 +102,7 @@ mod host {
             let mut byte_counter: u8 = 0;
             let mut unprocessed_count: usize = 0;
             let mut _loop_count: usize = 0;
-            let mut tx_frames: Vec<CANFrame> = Vec::with_capacity(self.inflight_count); 
+            let mut tx_frames: Vec<CanFrame> = Vec::with_capacity(self.inflight_count); 
             // let mut response: Vec<bool> = Vec::with_capacity(self.inflight_count);
 
             loop {
@@ -120,7 +120,7 @@ mod host {
                         };
                         data_bytes[i] = byte; //_counter + i as u8;
                     }
-                    let frame: CANFrame = match CANFrame::new(CAN_MSG_ID, &data_bytes[..], false, false) {
+                    let frame: CanFrame = match CanFrame::new(CAN_MSG_ID, &data_bytes[..], false, false) {
                         Ok(f) => f,
                         Err(_) => {
                             log::error!("Could not create frame for sending! At index {}", &tx_frames.len());
@@ -149,7 +149,7 @@ mod host {
                         thread::sleep(Duration::from_millis(1));
                     }
                 } else {
-                    let received_frame: CANFrame = match self.socket.read_frame() {
+                    let received_frame: CanFrame = match self.socket.read_frame() {
                         Ok(frame) => {
                             log::debug!{"Received frame: {:x?}", &frame};
                             frame
@@ -172,7 +172,7 @@ mod host {
                     // } else {
                         // if response[&rx_index] {
                             log::debug!("Received DUT frame.");
-                            let expected_frame: CANFrame = tx_frames.remove(0);
+                            let expected_frame: CanFrame = tx_frames.remove(0);
                             match Host::compare_frame(expected_frame, received_frame, 1) {
                                 Ok(result) => {
                                     if result {
@@ -199,16 +199,16 @@ mod host {
 
     #[test]
     fn test_compare_self() {
-        let test_frame: CANFrame = CANFrame::new(0x77, &[1, 2, 3, 4, 5, 6, 7, 8], false, false)
+        let test_frame: CanFrame = CanFrame::new(0x77, &[1, 2, 3, 4, 5, 6, 7, 8], false, false)
             .unwrap();
         assert!(Host::compare_frame(test_frame, test_frame, 0).unwrap());
     }
 
     #[test]
     fn test_compare_incremented_received() {
-        let expected_frame: CANFrame = CANFrame::new(0x77, &[1, 2, 3, 4, 5, 6, 7, 8], false, false)
+        let expected_frame: CanFrame = CanFrame::new(0x77, &[1, 2, 3, 4, 5, 6, 7, 8], false, false)
             .unwrap();
-        let test_frame: CANFrame = CANFrame::new(0x78, &[2, 3, 4, 5, 6, 7, 8, 9], false, false)
+        let test_frame: CanFrame = CanFrame::new(0x78, &[2, 3, 4, 5, 6, 7, 8, 9], false, false)
             .unwrap();
         assert!(Host::compare_frame(expected_frame, test_frame, 1).unwrap());
     }
@@ -222,9 +222,9 @@ mod host {
 
     #[test]
     fn test_false_incremented_received() {
-        let expected_frame: CANFrame = CANFrame::new(0x77, &[1, 2, 3, 4, 5, 6, 7, 8], false, false)
+        let expected_frame: CanFrame = CanFrame::new(0x77, &[1, 2, 3, 4, 5, 6, 7, 8], false, false)
             .unwrap();
-        let test_frame: CANFrame = CANFrame::new(0x78, &[2, 3, 4, 5, 7, 8, 9, 10], false, false)
+        let test_frame: CanFrame = CanFrame::new(0x78, &[2, 3, 4, 5, 7, 8, 9, 10], false, false)
             .unwrap();
         assert_eq!(false, Host::compare_frame(expected_frame, test_frame, 1).unwrap());
     }
@@ -233,10 +233,10 @@ mod host {
 mod dut {
     use log;
     use std::fmt;
-    use socketcan::{CANFrame, CANSocket};
+    use socketcan::{CanFrame, CanSocket};
 
     pub struct Dut {
-        socket: CANSocket,
+        socket: CanSocket,
     }
     
     const CAN_MSG_ID: u32 = 0x77;
@@ -260,7 +260,7 @@ mod dut {
         }
     }
     
-    fn check_frame(frame: CANFrame) -> Result<bool, DutError> {
+    fn check_frame(frame: CanFrame) -> Result<bool, DutError> {
         if  frame.id() != CAN_MSG_ID {
             Err(DutError::new("Received message ID mismatch!"))
         } else {
@@ -280,7 +280,7 @@ mod dut {
     }
 
     // Moved to parent module 'canfdtest'
-    // fn increment_frame(frame: CANFrame) -> Option<CANFrame> {
+    // fn increment_frame(frame: CanFrame) -> Option<CanFrame> {
     //     let frame_id: u32 = frame.id() + 1;
     //     let mut frame_data: Vec<u8> = vec![0; frame.data().len() as usize];
     //     frame_data[..].clone_from_slice(&frame.data());
@@ -293,7 +293,7 @@ mod dut {
     //             frame_data[i] += 1;
     //         }
     //     }
-    //     match CANFrame::new(frame_id, &frame_data, false, false) {
+    //     match CanFrame::new(frame_id, &frame_data, false, false) {
     //         Ok(frame) => Some(frame),
     //         Err(_) => None,
     //     }
@@ -301,7 +301,7 @@ mod dut {
 
     impl Dut {
         pub fn new(socket_name: &str) -> Result<Dut, DutError> {
-            let can: CANSocket = match CANSocket::open(socket_name) {
+            let can: CanSocket = match CanSocket::open(socket_name) {
                 Ok(socket) => socket,
                 Err(_) => return Err(DutError::new("Could not open socket")),
             };
@@ -314,7 +314,7 @@ mod dut {
         pub fn run(self) {
             let mut frame_count: usize = 0;
             loop {
-                let received_frame: CANFrame = match self.socket.read_frame() {
+                let received_frame: CanFrame = match self.socket.read_frame() {
                     Ok(frame) => {
                         log::debug!{"Received frame: {:x?}", &frame};
                         frame_count += 1;
@@ -328,7 +328,7 @@ mod dut {
                 match check_frame(received_frame) {
                     Ok(result) => {
                         if result {
-                            let frame: CANFrame = match super::increment_frame(received_frame) {
+                            let frame: CanFrame = match super::increment_frame(received_frame) {
                                 None => {
                                     log::error!("Error incrementing frame for sending!");
                                     break;
@@ -357,7 +357,7 @@ mod dut {
 
     #[test]
     fn test_correct_frame_check() {
-        let correct_frame: CANFrame = CANFrame::new(0x77, &[1, 2, 3], false, false)
+        let correct_frame: CanFrame = CanFrame::new(0x77, &[1, 2, 3], false, false)
             .unwrap();
         assert!(check_frame(correct_frame)
             .unwrap()
@@ -366,7 +366,7 @@ mod dut {
 
     #[test]
     fn test_false_id_frame_check() {
-        let false_id_frame: CANFrame = CANFrame::new(0x123, &[1, 2, 3], false, false)
+        let false_id_frame: CanFrame = CanFrame::new(0x123, &[1, 2, 3], false, false)
             .unwrap();
         assert_eq!(true, check_frame(false_id_frame)
             .is_err()
@@ -375,7 +375,7 @@ mod dut {
 
     #[test]
     fn test_false_data_frame_check() {
-        let false_data_frame: CANFrame = CANFrame::new(0x77, &[1, 1, 3], false, false)
+        let false_data_frame: CanFrame = CanFrame::new(0x77, &[1, 1, 3], false, false)
             .unwrap();
         assert_eq!(true, check_frame(false_data_frame)
             .is_err()
@@ -384,9 +384,9 @@ mod dut {
 
     #[test]
     fn test_frame_increment() {
-        let host_frame: CANFrame = CANFrame::new(0x77, &[1, 2, 3, 4, 5, 6, 7, 8], false, false)
+        let host_frame: CanFrame = CanFrame::new(0x77, &[1, 2, 3, 4, 5, 6, 7, 8], false, false)
             .unwrap();
-        let incremented_frame: CANFrame = super::increment_frame(host_frame)
+        let incremented_frame: CanFrame = super::increment_frame(host_frame)
             .unwrap();
         
         assert_eq!(0x78, incremented_frame.id());
@@ -396,9 +396,9 @@ mod dut {
     #[test]
     fn test_partial_frame_increment() {
         // This should not occur during normal echo test, but it doesn't hurt to test it
-        let host_frame: CANFrame = CANFrame::new(0x77, &[1, 2, 3, 4], false, false)
+        let host_frame: CanFrame = CanFrame::new(0x77, &[1, 2, 3, 4], false, false)
             .unwrap();
-        let incremented_frame: CANFrame = super::increment_frame(host_frame)
+        let incremented_frame: CanFrame = super::increment_frame(host_frame)
             .unwrap();
         
         assert_eq!(0x78, incremented_frame.id());
@@ -408,9 +408,9 @@ mod dut {
     #[test]
     fn test_overflow_increment() {
         // test for problem fixed in commit '1af70af034f7c4c20ad63a5e3127875b9bee6533'
-        let host_frame: CANFrame = CANFrame::new(0x77, &[0xf9, 0xfa , 0xfb, 0xfc, 0xfd, 0xfe, 0xff, 0x00], false, false)
+        let host_frame: CanFrame = CanFrame::new(0x77, &[0xf9, 0xfa , 0xfb, 0xfc, 0xfd, 0xfe, 0xff, 0x00], false, false)
             .unwrap();
-        let incremented_frame: CANFrame = super::increment_frame(host_frame)
+        let incremented_frame: CanFrame = super::increment_frame(host_frame)
             .unwrap();
 
         assert_eq!(&[0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff, 0x00, 0x01], incremented_frame.data());

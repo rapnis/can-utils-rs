@@ -1,6 +1,6 @@
 use clap::{App, Arg};
 use log;
-use socketcan::{CANFrame, CANSocket};
+use socketcan::{CanFrame, CanSocket};
 use std::process;
 
 const CAN_MSG_SIZE: usize = 8;
@@ -21,7 +21,7 @@ fn string_to_hex(input: String) -> Option<Vec<u8>> {
 }
 
 //TODO implement own error values to return
-fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
+fn parse_frame_string(frame_string: String) -> Option<CanFrame> {
     let frame_tokens: Vec<String> = frame_string
         .split("#")
         .map(|s| s.to_string())
@@ -36,15 +36,15 @@ fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
     let frame_data: String = frame_tokens[1].to_owned();
     if frame_data == "R" {
         // set RTR flag in frame
-        let frame: CANFrame = 
-            CANFrame::new(frame_id, &[], true, false)
+        let frame: CanFrame = 
+            CanFrame::new(frame_id, &[], true, false)
                 .expect("Error creating CAN-Remote-Frame");
         Some(frame)
     } else {
         let data_bytes: &[u8] = &(string_to_hex(frame_data).unwrap())[..];
         log::debug!("Frame bytes: {:x?}", data_bytes);
-        let frame: CANFrame =
-            CANFrame::new(frame_id, data_bytes, false, false)
+        let frame: CanFrame =
+            CanFrame::new(frame_id, data_bytes, false, false)
                 .expect("Error creating CAN-Frame!");
         Some(frame)
     }
@@ -54,9 +54,9 @@ fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
 fn test_frame_parsing() {
     let test_frame: String = "123#cafe"
         .to_owned();
-    let exptected_frame: CANFrame = CANFrame::new(123, &[0xca, 0xfe], false, false)
+    let exptected_frame: CanFrame = CanFrame::new(123, &[0xca, 0xfe], false, false)
         .unwrap();
-    let created_frame: CANFrame = parse_frame_string(test_frame)
+    let created_frame: CanFrame = parse_frame_string(test_frame)
         .unwrap();
     assert_eq!(exptected_frame.id(), created_frame.id());
     assert_eq!(exptected_frame.is_extended(), created_frame.is_extended());
@@ -70,9 +70,9 @@ fn test_frame_parsing() {
 fn test_frame_parsing_remote() {
     let test_frame: String = "444#R"
         .to_owned();
-    let exptected_frame: CANFrame = CANFrame::new(444, &[], true, false)
+    let exptected_frame: CanFrame = CanFrame::new(444, &[], true, false)
         .unwrap();
-    let created_frame: CANFrame = parse_frame_string(test_frame)
+    let created_frame: CanFrame = parse_frame_string(test_frame)
         .unwrap();
     assert_eq!(exptected_frame.id(), created_frame.id());
     assert_eq!(exptected_frame.is_rtr(), created_frame.is_rtr());
@@ -83,9 +83,9 @@ fn test_frame_parsing_remote() {
 fn test_frame_parsing_extended() {
     let test_frame: String = "123123123#0102030405060708"
         .to_owned();
-    let exptected_frame: CANFrame = CANFrame::new(123123123, &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08], false, false)
+    let exptected_frame: CanFrame = CanFrame::new(123123123, &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08], false, false)
         .unwrap();
-    let created_frame: CANFrame = parse_frame_string(test_frame)
+    let created_frame: CanFrame = parse_frame_string(test_frame)
         .unwrap();
     assert_eq!(exptected_frame.id(), created_frame.id());
     assert_eq!(exptected_frame.is_extended(), created_frame.is_extended());
@@ -133,7 +133,7 @@ fn main() {
             process::exit(1);
         },
     };
-    let can_socket: CANSocket = match CANSocket::open(can_socket_name) {
+    let can_socket: CanSocket = match CanSocket::open(can_socket_name) {
         Ok(socket) => socket,
         Err(error) => {
             log::debug!("Given name of socket: {}", can_socket_name);
@@ -146,7 +146,7 @@ fn main() {
         .unwrap()
         .to_owned();
 
-    let frame: CANFrame = parse_frame_string(frame_string)
+    let frame: CanFrame = parse_frame_string(frame_string)
         .unwrap();
     // blocking write function
     match can_socket.write_frame_insist(&frame) {
