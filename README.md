@@ -5,12 +5,11 @@
 ## cansend
 
 use this command to send a frame via CAN with ```cansend <socket_name> <frame_id>#<data_bytes>```  
-Examples: ```cansend can0 008#R``` ```cansend can0 10000#cafeaffe```
+Does not support CAN FD protocol.  
+Examples: ```cansend can0 008#R``` ```cansend can0 1abcd#cafeaffe```
 
 #### Open Topics:  
-- Source code documentation  
-- Verbose outputs/Logging  
-- Parse frame-id part as hex not as decimal
+- Source code documentation 
 
 #### Tested on:  
 - x86_64  
@@ -18,7 +17,7 @@ Examples: ```cansend can0 008#R``` ```cansend can0 10000#cafeaffe```
 ## canfdtest
 
 Echoes frames between a host and a device under test. Sends frames with fixed length and continuous data bytes.  
-Does not supprot CAN FD protocol.  
+Does not support CAN FD protocol.  
 DEVIATION TO ORIGINAL: Host does not receive own messages after sending! (This is currently not supported)
 
 Start as DUT: ```canfdtest <socket_name>```  
