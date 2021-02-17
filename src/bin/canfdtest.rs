@@ -88,7 +88,9 @@ mod host {
                 Err(_) => return Err(HostError::new("Error opening socket!")),
             };
             //TODO: set sockopt to receive own frames
-            //can.set_recv_own_msg(); -> not supported in socketcan crate as of version 1.7.0
+            if let Err(_) = can.set_recv_own_msgs(true) {
+                return Err(HostError::new("Could not set socket option to receive own messages!"));
+            }
 
             let host = Host {
                 socket: can,
@@ -102,12 +104,10 @@ mod host {
             let mut byte_counter: u8 = 0;
             let mut _loop_count: usize = 0;
             let mut tx_frames: Vec<CanFrame> = Vec::with_capacity(self.inflight_count); 
-            // let mut response: Vec<bool> = Vec::with_capacity(self.inflight_count);
+            let mut response: Vec<bool> = Vec::with_capacity(self.inflight_count);
 
             loop {
                 if tx_frames.len() < self.inflight_count {
-                    // line is commented out since checking for own frames is not possible ATM
-                    // response.push(true);
                     let mut data_bytes: [u8;8] = [0; 8];
                     for i in 0..data_bytes.len() {
                         let counted_bytes: usize = byte_counter as usize;
@@ -158,16 +158,17 @@ mod host {
                     };
 
                     //TODO: receiving own frame is possible with version 2.0.0 of crate socketcan (but does not build)
-                    // if received_frame.id() == CAN_MSG_ID {
-                    //     log::debug!("Received own frame.");
-                    //     response[index] = match Host::compare_frame(tx_frames[index], received_frame, 0) {
-                    //         Ok(result) => {
-                    //             response.push(result)
-                    //         },
-                    //         Err(_) => false,
-                    //     };
-                    // } else {
-                        // if response.remove(0) {
+                    if received_frame.id() == CAN_MSG_ID {
+                        log::debug!("Received own frame.");
+                        let tx_frame: CanFrame = tx_frames[response.len()];
+                        match Host::compare_frame(tx_frame, received_frame, 0) {
+                            Ok(result) => {
+                                response.push(result)
+                            },
+                            Err(_) => break,
+                        }
+                    } else {
+                        if response.remove(0) {
                             log::debug!("Received DUT frame.");
                             let expected_frame: CanFrame = tx_frames.remove(0);
                             match Host::compare_frame(expected_frame, received_frame, 1) {
@@ -183,11 +184,11 @@ mod host {
                                 },
                                 Err(_) => break,
                             }
-                    //     } else {
-                    //         log::error!("Did not receive own frame! Rx before Tx!");
-                    //         break;
-                    //     }
-                    // }
+                        } else {
+                            log::error!("Did not receive own frame! Rx before Tx!");
+                            break;
+                        }
+                    }
                 }
             }
         }
