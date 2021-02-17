@@ -1,12 +1,13 @@
 use clap::{App, Arg};
-use log;
+use log::LevelFilter;
 use socketcan::{CANFrame, CANSocket};
-use std::process;
+use std::{convert::TryInto, process};
+use simple_logger::SimpleLogger;
 
 const CAN_MSG_SIZE: usize = 8;
 
 //TODO implement own error values to return
-fn string_to_hex(input: String) -> Option<Vec<u8>> {
+fn data_string_to_hex(input: String) -> Option<Vec<u8>> {
     let str: &str  = &input[..];
     if str.len() % 2 != 0 || str.len() > (CAN_MSG_SIZE * 2) {
         None
@@ -20,6 +21,29 @@ fn string_to_hex(input: String) -> Option<Vec<u8>> {
     }
 }
 
+fn id_string_to_hex(input: String) -> Option<u32> {
+    let id_string: String;
+    if input.len() % 2 != 0 {
+        id_string = format!("{}{}", "0", input);
+    } else {
+        id_string = input;
+    }
+    let mut result: Vec<u8> = (0..id_string.len())
+        .step_by(2)
+        .map(|o| u8::from_str_radix(&id_string[o..o + 2], 16)
+        .unwrap())
+        .collect();
+    if result.len() != 4 {
+        for _i in 0..(4 - result.len()) {
+            result.insert(0, 0);
+        }
+        log::debug!("Result id parsing: {:x?}", result);
+    } else {
+        log::debug!("Result id parsing: {:x?}", result);
+    }
+    Some(u32::from_be_bytes(result[..].try_into().unwrap()))
+}
+
 //TODO implement own error values to return
 fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
     let frame_tokens: Vec<String> = frame_string
@@ -30,9 +54,7 @@ fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
     if frame_tokens.len() != 2 {
         return None;
     }
-    let frame_id: u32 = frame_tokens[0]
-        .parse()
-        .unwrap();
+    let frame_id: u32 = id_string_to_hex(frame_tokens[0].to_owned()).unwrap();
     let frame_data: String = frame_tokens[1].to_owned();
     if frame_data == "R" {
         // set RTR flag in frame
@@ -41,7 +63,7 @@ fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
                 .expect("Error creating CAN-Remote-Frame");
         Some(frame)
     } else {
-        let data_bytes: &[u8] = &(string_to_hex(frame_data).unwrap())[..];
+        let data_bytes: &[u8] = &(data_string_to_hex(frame_data).unwrap())[..];
         log::debug!("Frame bytes: {:x?}", data_bytes);
         let frame: CANFrame =
             CANFrame::new(frame_id, data_bytes, false, false)
@@ -54,7 +76,7 @@ fn parse_frame_string(frame_string: String) -> Option<CANFrame> {
 fn test_frame_parsing() {
     let test_frame: String = "123#cafe"
         .to_owned();
-    let exptected_frame: CANFrame = CANFrame::new(123, &[0xca, 0xfe], false, false)
+    let exptected_frame: CANFrame = CANFrame::new(0x123, &[0xca, 0xfe], false, false)
         .unwrap();
     let created_frame: CANFrame = parse_frame_string(test_frame)
         .unwrap();
@@ -70,7 +92,7 @@ fn test_frame_parsing() {
 fn test_frame_parsing_remote() {
     let test_frame: String = "444#R"
         .to_owned();
-    let exptected_frame: CANFrame = CANFrame::new(444, &[], true, false)
+    let exptected_frame: CANFrame = CANFrame::new(0x444, &[], true, false)
         .unwrap();
     let created_frame: CANFrame = parse_frame_string(test_frame)
         .unwrap();
@@ -81,9 +103,9 @@ fn test_frame_parsing_remote() {
 
 #[test]
 fn test_frame_parsing_extended() {
-    let test_frame: String = "123123123#0102030405060708"
+    let test_frame: String = "111fff#0102030405060708"
         .to_owned();
-    let exptected_frame: CANFrame = CANFrame::new(123123123, &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08], false, false)
+    let exptected_frame: CANFrame = CANFrame::new(0x111fff, &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08], false, false)
         .unwrap();
     let created_frame: CANFrame = parse_frame_string(test_frame)
         .unwrap();
@@ -94,6 +116,18 @@ fn test_frame_parsing_extended() {
     for i in 0..exptected_frame.data().len() {
         assert_eq!(exptected_frame.data()[i], created_frame.data()[i]);
     }
+}
+
+#[test]
+fn test_id_parsing_even() {
+    let frame_id: u32 = id_string_to_hex("ff7123".to_owned()).unwrap();
+    assert_eq!(0xff7123, frame_id);
+}
+
+#[test]
+fn test_id_parsing_odd() {
+    let frame_id: u32 = id_string_to_hex("1ff7123".to_owned()).unwrap();
+    assert_eq!(0x1ff7123, frame_id);
 }
 
 
@@ -126,6 +160,11 @@ fn main() {
                             )
                             .get_matches();
 
+    SimpleLogger::new()
+        .with_level(LevelFilter::Info)
+        .init()
+        .unwrap();
+
     let can_socket_name: &str = match arg_matches.value_of("socket") {
         Some(s) => s,
         None => {
@@ -146,8 +185,13 @@ fn main() {
         .unwrap()
         .to_owned();
 
-    let frame: CANFrame = parse_frame_string(frame_string)
-        .unwrap();
+    let frame: CANFrame = match parse_frame_string(frame_string) {
+        Some(frame) => frame,
+        None => {
+            log::error!("Error parsing frame-string!");
+            process::exit(1);
+        },
+    };
     // blocking write function
     match can_socket.write_frame_insist(&frame) {
         Ok(()) => {
