@@ -117,7 +117,7 @@ mod host {
                         } else {
                             byte_counter + i as u8
                         };
-                        data_bytes[i] = byte; //_counter + i as u8;
+                        data_bytes[i] = byte;
                     }
                     let frame: CANFrame = match CANFrame::new(CAN_MSG_ID, &data_bytes[..], false, false) {
                         Ok(f) => f,
@@ -128,7 +128,6 @@ mod host {
                     };
                     match self.socket.write_frame_insist(&frame) {
                         Ok(_) => {
-                            // tx_frames.push(frame);
                             tx_frames.push(frame);
                         },
                         Err(_) => {
@@ -163,12 +162,12 @@ mod host {
                     //     log::debug!("Received own frame.");
                     //     response[index] = match Host::compare_frame(tx_frames[index], received_frame, 0) {
                     //         Ok(result) => {
-                    //             result
+                    //             response.push(result)
                     //         },
                     //         Err(_) => false,
                     //     };
                     // } else {
-                        // if response[&rx_index] {
+                        // if response.remove(0) {
                             log::debug!("Received DUT frame.");
                             let expected_frame: CANFrame = tx_frames.remove(0);
                             match Host::compare_frame(expected_frame, received_frame, 1) {
@@ -275,26 +274,6 @@ mod dut {
             Ok(true)
         }
     }
-
-    // Moved to parent module 'canfdtest'
-    // fn increment_frame(frame: CANFrame) -> Option<CANFrame> {
-    //     let frame_id: u32 = frame.id() + 1;
-    //     let mut frame_data: Vec<u8> = vec![0; frame.data().len() as usize];
-    //     frame_data[..].clone_from_slice(&frame.data());
-    //     log::debug!("Frame data {:x?}", &frame_data);
-    //     for i in 0..frame_data.len() {
-    //         // handled attempt to add with overflow
-    //         if frame_data[i] >= 255 {
-    //             frame_data[i] = 0;
-    //         } else {
-    //             frame_data[i] += 1;
-    //         }
-    //     }
-    //     match CANFrame::new(frame_id, &frame_data, false, false) {
-    //         Ok(frame) => Some(frame),
-    //         Err(_) => None,
-    //     }
-    // }
 
     impl Dut {
         pub fn new(socket_name: &str) -> Result<Dut, DutError> {
@@ -454,7 +433,6 @@ pub fn main() {
                             )
                             .get_matches();
     
-    //TODO: select logging framework... maybe fern or something else...
     match arg_matches.occurrences_of("verbosity") {
         0 => SimpleLogger::new()
                 .with_level(LevelFilter::Error)
