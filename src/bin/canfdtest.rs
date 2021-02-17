@@ -100,13 +100,12 @@ mod host {
 
         pub fn run(self) {
             let mut byte_counter: u8 = 0;
-            let mut unprocessed_count: usize = 0;
             let mut _loop_count: usize = 0;
             let mut tx_frames: Vec<CANFrame> = Vec::with_capacity(self.inflight_count); 
             // let mut response: Vec<bool> = Vec::with_capacity(self.inflight_count);
 
             loop {
-                if unprocessed_count < self.inflight_count {
+                if tx_frames.len() < self.inflight_count {
                     // line is commented out since checking for own frames is not possible ATM
                     // response.push(true);
                     let mut data_bytes: [u8;8] = [0; 8];
@@ -142,7 +141,6 @@ mod host {
                     } else {
                         byte_counter += 1;
                     }
-                    unprocessed_count += 1;
                     if byte_counter % 33 == 0 {
                         thread::sleep(Duration::from_millis(3));
                     } else {
@@ -178,7 +176,6 @@ mod host {
                                     if result {
                                         // loop_count += 1;
                                         log::debug!("Frame comparison passed.");
-                                        unprocessed_count -= 1;
                                         continue;
                                     } else {
                                         log::error!("Frame comparison failed!");
