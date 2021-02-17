@@ -1,7 +1,8 @@
 use clap::{App, Arg};
-use log;
+use log::LevelFilter;
 use socketcan::{CANFrame, CANSocket};
 use std::process;
+use simple_logger::SimpleLogger;
 
 const CAN_MSG_SIZE: usize = 8;
 
@@ -125,6 +126,11 @@ fn main() {
                                     .required(true),
                             )
                             .get_matches();
+
+    SimpleLogger::new()
+        .with_level(LevelFilter::Info)
+        .init()
+        .unwrap();
 
     let can_socket_name: &str = match arg_matches.value_of("socket") {
         Some(s) => s,
