@@ -152,8 +152,13 @@ fn main() {
         .unwrap()
         .to_owned();
 
-    let frame: CANFrame = parse_frame_string(frame_string)
-        .unwrap();
+    let frame: CANFrame = match parse_frame_string(frame_string) {
+        Some(frame) => frame,
+        None => {
+            log::error!("Error parsing frame-string!");
+            process::exit(1);
+        },
+    };
     // blocking write function
     match can_socket.write_frame_insist(&frame) {
         Ok(()) => {
