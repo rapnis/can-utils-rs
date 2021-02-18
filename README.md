@@ -26,9 +26,12 @@ Start as Host: ```canfdtest <socket_name> -g``` (other flags are not supported a
 #### Open Topics:
 - Source code documentation
 - Progress printing
+- Execution stops when no buffer is available for writing
 
 #### DUT part tested on:
 - x86_64 
+- arm64 (statically compiled, aarch64-unknown-linux-musl)  
 
 #### Host part tested on:
 - x86_64
+- arm64 (statically compiled, aarch64-unknown-linux-musl)  
