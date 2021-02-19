@@ -327,6 +327,11 @@ mod dut {
                     },
                     Err(_) => log::error!("Error occured checking frame!"),
                 };
+                if frame_count == CAN_MSG_WAIT {
+                    thread::sleep(Duration::from_millis(3));
+                } else {
+                    continue;
+                }
             }
             log::info!("Received {} frames.", frame_count);
         }
