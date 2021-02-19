@@ -5,6 +5,7 @@ use socketcan::CANFrame;
 use simple_logger::SimpleLogger;
 
 const DEFAULT_INFLIGHT_COUNT: usize = 50;
+const CAN_MSG_ID: u32 = 0x77;
 
 fn increment_frame(frame: CANFrame) -> Option<CANFrame> {
     let frame_id: u32 = frame.id() + 1;
@@ -30,8 +31,6 @@ mod host {
     use std::fmt;
     use std::time::{Duration};
     use std::thread;
-
-    const CAN_MSG_ID: u32 = 0x77;
 
     #[derive(Debug)]
     pub struct HostError {
@@ -119,7 +118,7 @@ mod host {
                         };
                         data_bytes[i] = byte;
                     }
-                    let frame: CANFrame = match CANFrame::new(CAN_MSG_ID, &data_bytes[..], false, false) {
+                    let frame: CANFrame = match CANFrame::new(super::CAN_MSG_ID, &data_bytes[..], false, false) {
                         Ok(f) => f,
                         Err(_) => {
                             log::error!("Could not create frame for sending! At index {}", &tx_frames.len());
@@ -230,12 +229,14 @@ mod dut {
     use log;
     use std::fmt;
     use socketcan::{CANFrame, CANSocket};
+    use std::time::{Duration};
+    use std::thread;
 
     pub struct Dut {
         socket: CANSocket,
     }
     
-    const CAN_MSG_ID: u32 = 0x77;
+    const CAN_MSG_WAIT: usize = 27;
 
     #[derive(Debug)]
     pub struct DutError {
@@ -257,7 +258,7 @@ mod dut {
     }
     
     fn check_frame(frame: CANFrame) -> Result<bool, DutError> {
-        if  frame.id() != CAN_MSG_ID {
+        if  frame.id() != super::CAN_MSG_ID {
             Err(DutError::new("Received message ID mismatch!"))
         } else {
             for i in 1..frame.data().len() {
