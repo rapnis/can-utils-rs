@@ -14,6 +14,9 @@ Examples: ```cansend can0 008#R``` ```cansend can0 1abcd#cafeaffe```
 #### Tested on:  
 - x86_64  
 
+## candump  
+Display frames on a CAN bus.
+
 ## canfdtest
 
 Echoes frames between a host and a device under test. Sends frames with fixed length and continuous data bytes.  
