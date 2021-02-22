@@ -1,5 +1,6 @@
 use clap::{App, Arg};
 use log::LevelFilter;
+use std::io::{Write, stdout};
 use std::process;
 use socketcan::CANFrame;
 use simple_logger::SimpleLogger;
@@ -25,13 +26,24 @@ fn increment_frame(frame: CANFrame) -> Option<CANFrame> {
     }
 }
 
+fn print_progress(count: usize) {
+    if count % 255 == 0 {
+        print!("*");
+        match stdout().flush() {
+            Ok(_) => return,
+            Err(_) => log::error!("Could not print out result!"),
+        }
+    } else {
+        return;
+    }
+}
+
 mod host {
     use log;
     use socketcan::{CANFrame, CANSocket};
     use std::fmt;
     use std::time::{Duration};
     use std::thread;
-
     #[derive(Debug)]
     pub struct HostError {
         details: String
@@ -99,7 +111,7 @@ mod host {
 
         pub fn run(self) {
             let mut byte_counter: u8 = 0;
-            let mut _loop_count: usize = 0;
+            let mut loop_count: usize = 0;
             let mut tx_frames: Vec<CANFrame> = Vec::with_capacity(self.inflight_count); 
             // let mut response: Vec<bool> = Vec::with_capacity(self.inflight_count);
 
@@ -172,9 +184,14 @@ mod host {
                             match Host::compare_frame(expected_frame, received_frame, 1) {
                                 Ok(result) => {
                                     if result {
-                                        // loop_count += 1;
+                                        loop_count += 1;
+                                        super::print_progress(loop_count);
                                         log::debug!("Frame comparison passed.");
-                                        continue;
+                                        if loop_count >= self.frame_count && self.frame_count > 0 {
+                                            break;
+                                        } else {
+                                            continue;
+                                        }
                                     } else {
                                         log::error!("Frame comparison failed!");
                                         break;
@@ -189,6 +206,7 @@ mod host {
                     // }
                 }
             }
+            log::info!("Processed frames {}", loop_count);
         }
     }
 
@@ -295,6 +313,7 @@ mod dut {
                     Ok(frame) => {
                         log::debug!{"Received frame: {:x?}", &frame};
                         frame_count += 1;
+                        super::print_progress(frame_count);
                         frame
                     },
                     Err(e) => {
@@ -469,6 +488,7 @@ pub fn main() {
         },
     };
     if arg_matches.is_present("generator") {
+        log::info!("Starting as Host.");
         let host: host::Host = match host::Host::new(socket_name, DEFAULT_INFLIGHT_COUNT, 0) {
             Ok(h) => h,
             Err(e) => {
